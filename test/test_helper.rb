@@ -9,7 +9,7 @@ require 'test/unit'
 require 'money'
 require 'mocha'
 require 'yaml'
-require 'active_merchant_sermepa'
+require 'active_merchant_ceca'
 
 require 'action_controller'
 require 'action_view/template'

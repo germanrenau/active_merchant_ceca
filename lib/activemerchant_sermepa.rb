@@ -1,3 +1,3 @@
 
-require 'active_merchant_sermepa'
+require 'active_merchant_ceca'
 

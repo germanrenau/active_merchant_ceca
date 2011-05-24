@@ -1,18 +1,18 @@
 require File.expand_path('../../../../test_helper', __FILE__)
 
-class SermepaHelperTest < Test::Unit::TestCase
+class CecaHelperTest < Test::Unit::TestCase
   include ActiveMerchant::Billing::Integrations
 
   def setup
-    Sermepa::Helper.credentials = {
+    Ceca::Helper.credentials = {
         :terminal_id => '9',
         :commercial_id => '999008881',
         :secret_key => 'qwertyasdf0123456789'
     }
-    @helper = Sermepa::Helper.new('070803113316', 'Comercio Pruebas', :amount => 825, :currency => 'EUR')
+    @helper = Ceca::Helper.new('070803113316', 'Comercio Pruebas', :amount => 825, :currency => 'EUR')
     @helper.description = "Alfombrilla para raton"
-    @helper.customer_name = "Sermepa"
-    @helper.notify_url = "https://sis-t.sermepa.es:25443/sis/pruebaCom.jsp"
+    @helper.customer_name = "Ceca"
+    @helper.notify_url = "https://sis-t.ceca.es:25443/sis/pruebaCom.jsp"
   end
 
   def test_credentials_accessible
@@ -20,7 +20,7 @@ class SermepaHelperTest < Test::Unit::TestCase
   end
 
   def test_credentials_overwritable
-    @helper = Sermepa::Helper.new(29292929, 'cody@example.com', :amount => 1235, :currency => 'EUR', 
+    @helper = Ceca::Helper.new(29292929, 'cody@example.com', :amount => 1235, :currency => 'EUR', 
                                  :credentials => {:terminal_id => 12})
     assert_field 'Ds_Merchant_Terminal', '12'
   end
