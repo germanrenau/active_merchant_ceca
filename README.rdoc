@@ -1,4 +1,4 @@
-= Active Merchant Ceca Plugin
+= Active Merchant CECA Plugin
 
 Basic support for the Spanish CECA Virtual POS payment gateway.
 Used by many banks in Spain and known locally as a "TPV Virtual".
