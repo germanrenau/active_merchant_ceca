@@ -2,17 +2,17 @@
 module ActiveMerchant #:nodoc:
   module Billing #:nodoc:
     module Integrations #:nodoc:
-      module Sermepa
-        # Sermepa/Servired Spanish Virtual POS Gateway
+      module Ceca
+        # CECA Spanish Virtual POS Gateway
         #
-        # Support for the Spanish payment gateway provided by Sermepa, part of Servired,
+        # Support for the Spanish payment gateway provided by CECA, part of CECA,
         # one of the main providers in Spain to Banks and Cajas.
         #
         # Requires the :terminal_id, :commercial_id, and :secret_key to be set in the credentials
         # before the helper can be used. Credentials may be overwriten when instantiating the helper
         # if required or instead of the global variable. Optionally, the :key_type can also be set to 
         # either 'sha1_complete' or 'sha1_extended', where the later is the default case. This
-        # is a configurable option in the Sermepa admin which you may or may not be able to access.
+        # is a configurable option in the CECA admin which you may or may not be able to access.
         # If nothing seems to work, try changing this.
         #
         # Ensure the gateway is configured correctly. Synchronization should be set to Asynchronous
@@ -22,7 +22,7 @@ module ActiveMerchant #:nodoc:
         #
         # Your view for a payment form might look something like the following:
         #
-        #   <%= payment_service_for @transaction.id, 'Company name', :amount => @transaction.amount, :currency => 'EUR', :service => :sermepa do |service| %>
+        #   <%= payment_service_for @transaction.id, 'Company name', :amount => @transaction.amount, :currency => 'EUR', :service => :ceca do |service| %>
         #     <% service.description     @sale.description %>
         #     <% service.customer_name   @sale.client.name %>
         #     <% service.notify_url      notify_sale_url(@sale) %>
@@ -104,15 +104,15 @@ module ActiveMerchant #:nodoc:
           end
 
           def currency=( value )
-            add_field mappings[:currency], Sermepa.currency_code(value) 
+            add_field mappings[:currency], Ceca.currency_code(value) 
           end
 
           def language=(lang)
-            add_field mappings[:language], Sermepa.language_code(lang)
+            add_field mappings[:language], Ceca.language_code(lang)
           end
 
           def transaction_type=(type)
-            add_field mappings[:transaction_type], Sermepa.transaction_code(type)
+            add_field mappings[:transaction_type], Ceca.transaction_code(type)
           end
 
           def form_fields
@@ -133,7 +133,7 @@ module ActiveMerchant #:nodoc:
             headers['Content-Type'] = 'application/x-www-form-urlencoded'
   
             # Return the raw response data
-            ssl_post(Sermepa.operations_url, "entrada="+CGI.escape(body), headers)
+            ssl_post(Ceca.operations_url, "entrada="+CGI.escape(body), headers)
           end
 
           protected
@@ -165,7 +165,7 @@ module ActiveMerchant #:nodoc:
                   @fields['Ds_Merchant_MerchantCode'].to_s +
                   @fields['Ds_Merchant_Currency'].to_s
 
-            case Sermepa.transaction_from_code(@fields['Ds_Merchant_TransactionType'])
+            case Ceca.transaction_from_code(@fields['Ds_Merchant_TransactionType'])
             when :recurring_transaction
               str += @fields['Ds_Merchant_SumTotal']
             end

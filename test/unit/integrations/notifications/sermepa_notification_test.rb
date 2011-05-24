@@ -1,44 +1,44 @@
 require File.expand_path('../../../../test_helper', __FILE__)
 
-class SermepaNotificationTest < Test::Unit::TestCase
+class CecaNotificationTest < Test::Unit::TestCase
   include ActiveMerchant::Billing::Integrations
 
   def setup
-    Sermepa::Helper.credentials = {
+    Ceca::Helper.credentials = {
         :terminal_id => '1',
         :commercial_id => '999008881',
         :secret_key => 'qwertyasdf0123456789'
     }
-    @sermepa = Sermepa::Notification.new(raw_params_data)
+    @ceca = Ceca::Notification.new(raw_params_data)
   end
 
   def test_accessors
-    assert @sermepa.complete?
-    assert_equal "Completed", @sermepa.status
-    assert_equal "070820124150", @sermepa.transaction_id
-    assert_equal "0.45", @sermepa.gross
-    assert_equal "EUR", @sermepa.currency
-    assert_equal Time.parse("2007-08-20 12:47"), @sermepa.received_at
+    assert @ceca.complete?
+    assert_equal "Completed", @ceca.status
+    assert_equal "070820124150", @ceca.transaction_id
+    assert_equal "0.45", @ceca.gross
+    assert_equal "EUR", @ceca.currency
+    assert_equal Time.parse("2007-08-20 12:47"), @ceca.received_at
   end
 
   def test_compositions
-    assert_equal Money.new(45, 'EUR'), @sermepa.amount
+    assert_equal Money.new(45, 'EUR'), @ceca.amount
   end
 
   def test_respond_to_acknowledge
-    assert @sermepa.respond_to?(:acknowledge)
+    assert @ceca.respond_to?(:acknowledge)
   end
 
   # Replace with real successful acknowledgement code
   def test_acknowledgement    
-    assert @sermepa.acknowledge
+    assert @ceca.acknowledge
   end
 
   def test_acknowledgement_with_xml
     # Fake the presence of xml!
-    @sermepa.params['code'] = '123'
-    @sermepa.params["ds_signature"] = "49A8A907D86FE4763890180061E7907589DBE96A"
-    assert @sermepa.acknowledge
+    @ceca.params['code'] = '123'
+    @ceca.params["ds_signature"] = "49A8A907D86FE4763890180061E7907589DBE96A"
+    assert @ceca.acknowledge
   end
 
   private
