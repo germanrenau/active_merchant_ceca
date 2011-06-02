@@ -9,16 +9,16 @@ module ActiveMerchant #:nodoc:
         autoload :Helper, 'active_merchant/billing/integrations/ceca/helper.rb'
         autoload :Return, 'active_merchant/billing/integrations/ceca/return.rb'
         autoload :Notification, 'active_merchant/billing/integrations/ceca/notification.rb'
-       
+      
         mattr_accessor :service_test_url
-        self.service_test_url = "https://sis-t.ceca.es:25443/sis/realizarPago"
+        self.service_test_url = "https://sis-t.sermepa.es:25443/sis/realizarPago"
         mattr_accessor :service_production_url
-        self.service_production_url = "https://sis.ceca.es/sis/realizarPago"
+        self.service_production_url = "https://sis.sermepa.es/sis/realizarPago"
 
         mattr_accessor :operations_test_url
-        self.operations_test_url = "https://sis-t.ceca.es:25443/sis/operaciones"
+        self.operations_test_url = "http://tpv.ceca.es:8000/cgi-bin/tpv"
         mattr_accessor :operations_production_url
-        self.operations_production_url = "https://sis.ceca.es/sis/operaciones"
+        self.operations_production_url = "https://pgw.ceca.es/cgi-bin/tpv"
 
 
         def self.service_url 

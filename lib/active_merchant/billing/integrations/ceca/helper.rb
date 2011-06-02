@@ -5,7 +5,7 @@ module ActiveMerchant #:nodoc:
       module Ceca
         # CECA Spanish Virtual POS Gateway
         #
-        # Support for the Spanish payment gateway provided by CECA, part of CECA,
+        # Support for the Spanish payment gateway provided by CECA,
         # one of the main providers in Spain to Banks and Cajas.
         #
         # Requires the :terminal_id, :commercial_id, and :secret_key to be set in the credentials
