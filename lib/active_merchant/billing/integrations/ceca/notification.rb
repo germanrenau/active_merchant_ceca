@@ -6,27 +6,30 @@ module ActiveMerchant #:nodoc:
         class Notification < ActiveMerchant::Billing::Integrations::Notification
           include PostsData
 
+          NotifySignatureFields = ["MerchantID", "AcquiererBIN", "TerminalID", "Num_operacion", 
+            "Importe", "TipoMoneda", "Exponente", "Referencia"]
+
+
           def complete?
             status == 'Completed'
           end 
 
-          def transaction_id
-            params['ds_order']
+          def order
+            params['Num_operacion']
           end
 
           # When was this payment received by the client. 
           def received_at
-            if params['ds_date']
-              (day, month, year) = params['ds_date'].split('/')
-              Time.parse("#{year}-#{month}-#{day} #{params['ds_hour']}")
-            else
-              Time.now # Not provided!
-            end
+            Time.now
           end
 
           # the money amount we received in cents in X.2 format
           def gross
-            sprintf("%.2f", params['ds_amount'].to_f / 100)
+            "%d.%02d" % [ gross_cents / 100, gross_cents % 100 ]
+          end
+
+          def gross_cents
+            params['Importe'].to_i
           end
 
           # Was this a test transaction?
@@ -35,36 +38,30 @@ module ActiveMerchant #:nodoc:
           end
 
           def currency
-            Ceca.currency_from_code( params['ds_currency'] ) 
+            Ceca.currency_from_code( params['TipoMoneda'] ) 
           end
 
           # Status of transaction. List of possible values:
           # <tt>Completed</tt>
           # <tt>Failed</tt>
-          # <tt>Pending</tt>
           def status
             case error_code.to_i
-            when 0..99
+            when 0, 400, 900
               'Completed'
-            when 900
-              'Pending'
             else
               'Failed'
             end
           end
 
           def error_code
-            params['ds_response']
+            params['Num_aut']
           end
 
           def error_message
-            msg = Ceca.response_code_message(error_code)
+            msg = Ceca.response_message_from_code(error_code)
             error_code.to_s + ' - ' + (msg.nil? ? 'Operación Aceptada' : msg)
           end
 
-          def secure_payment?
-            params['ds_securepayment'] == '1'
-          end
 
           # Acknowledge the transaction.
           #
@@ -86,57 +83,30 @@ module ActiveMerchant #:nodoc:
           #     end
           #
           #
-          def acknowledge(credentials = nil)
-            return false if params['ds_signature'].blank?
-            str = 
-              params['ds_amount'].to_s +
-              params['ds_order'].to_s +
-              params['ds_merchantcode'].to_s + 
-              params['ds_currency'].to_s +
-              params['ds_response'].to_s
-            if xml?
-              str += params['ds_transactiontype'].to_s + params['ds_securepayment'].to_s
-            end
-
-            str += (credentials || Ceca::Helper.credentials)[:secret_key]
-            sig = Digest::SHA1.hexdigest(str)
-            sig.upcase == params['ds_signature'].to_s.upcase
+          def acknowledge
+            sign = params["Firma"]
+            sign.present? && sign == calculated_sign
           end
 
           private
 
-          def xml?
-            !params['code'].blank?
+          def calculated_sign
+            sign_str = Ceca.encryption_key + NotifySignatureFields.map {|f| params[f].to_s }.sum
+            Digest::SHA1.hexdigest(sign_str)
           end
 
           # Take the posted data and try to extract the parameters.
           #
-          # Posted data can either be a parameters hash, XML string or CGI data string
+          # Posted data can either be a parameters hash or CGI data string
           # of parameters.
           #
           def parse(post)
             if post.is_a?(Hash)
-              post.each { |key, value|  params[key.downcase] = value }
-            elsif post.to_s =~ /<retornoxml>/i
-              # XML source
-              self.params = xml_response_to_hash(@raw)
+              post.each {|key, value|  params[key.downcase] = value }
             else
-              for line in post.to_s.split('&')    
-                key, value = *line.scan( %r{^([A-Za-z0-9_.]+)\=(.*)$} ).flatten
-                params[key.downcase] = CGI.unescape(value)
-              end
+              super
             end
             @raw = post.inspect.to_s
-          end
-
-          def xml_response_to_hash(xml)
-            result = { }
-            doc = Nokogiri::XML(xml)
-            doc.css('RETORNOXML OPERACION').children().each do |child|
-              result[child.name.downcase] = child.inner_text
-            end
-            result['code'] = doc.css('RETORNOXML CODIGO').inner_text
-            result
           end
  
         end

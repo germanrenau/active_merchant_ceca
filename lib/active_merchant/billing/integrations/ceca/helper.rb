@@ -37,52 +37,70 @@ module ActiveMerchant #:nodoc:
         class Helper < ActiveMerchant::Billing::Integrations::Helper
           include PostsData
 
-          class << self
-            # Credentials should be set as a hash containing the fields:
-            #  :terminal_id, :commercial_id, :secret_key, :key_type (optional)
-            attr_accessor :credentials
-          end
+          FormSignatureFields = ["MerchantID", "AcquiererBIN", "TerminalID", "Num_operacion", 
+            "Importe", "TipoMoneda", "Exponente", "Cifrado", "URL_OK", "URL_NOK"]
 
-          mapping :account,     'Ds_Merchant_MerchantName'
+          ReqSignatureFields = ["MerchantID", "AcquiererBIN", "TerminalID", "Num_operacion", 
+            "Importe", "TipoMoneda", "Exponente", "Referencia", "Cifrado"]
 
-          mapping :currency,    'Ds_Merchant_Currency'
-          mapping :amount,      'Ds_Merchant_Amount'
 
-          mapping :order,       'Ds_Merchant_Order'
-          mapping :description, 'Ds_Merchant_ProductDescription'
-          mapping :client,      'Ds_Merchant_Titular'
+          mapping :acquirer_id,    'AcquirerBIN'
+          mapping :terminal_id,    'TerminalID'
 
-          mapping :notify_url,  'Ds_Merchant_MerchantURL'
-          mapping :success_url, 'Ds_Merchant_UrlOK'
-          mapping :failure_url, 'Ds_Merchant_UrlKO'
+          mapping :account,     'MerchantID'
 
-          mapping :language,    'Ds_Merchant_ConsumerLanguage'
+          mapping :order,       'Num_operacion'
+          mapping :description, 'Descripcion'
 
-          mapping :transaction_type, 'Ds_Merchant_TransactionType'
+          mapping :currency,    'TipoMoneda'
+          mapping :amount,      'Importe'
 
-          mapping :customer_name, 'Ds_Merchant_Titular' 
+          mapping :success_url, 'URL_OK'
+          mapping :failure_url, 'URL_NOK'
 
-          #### Special Request Specific Fields ####
-          mapping :signature,   'Ds_Merchant_MerchantSignature'
+          mapping :signature,   'Firma'
+
+          mapping :language,    'Idioma'
+
+          mapping :reference,   'Referencia'
+
+          #### Fixed fields ####
+          mapping :exponent,          'Exponente'       # "2"
+          mapping :encryption,        'Cifrado'         # "SHA1"
+          mapping :supported_payment, 'Pago_soportado'  # "SSL"
+          ########
+
+          #### Specific Fields for notification ####
+          mapping :auth_num,    'Num_aut'
+          mapping :country,     'Pais'
+          ########
+
+          #### Specific Fields for sending customer's credit card info ####
+          mapping :payment_type,    'Pago_elegido'    # "SSL" | ""
+          mapping :pan,             'PAN'
+          mapping :expiration_date, 'Caducidad'
+          mapping :cvv2,            'CVV2'
           ########
 
           # ammount should always be provided in cents!
           def initialize(order, account, options = {})
-            self.credentials = options.delete(:credentials) if options[:credentials]
             super(order, account, options)
 
-            add_field 'Ds_Merchant_MerchantCode', credentials[:commercial_id]
-            add_field 'Ds_Merchant_Terminal', credentials[:terminal_id]
-            #add_field mappings[:transaction_type], '0' # Default Transaction Type
-            self.transaction_type = :authorization
-          end
+            # Merchant Account specific fields
+            self.account = Ceca.merchant_id unless @fields[mappings[:account]]
+            self.acquirer_id = Ceca.acquirer_id unless @fields[mappings[:acquirer_bin]]
+            self.terminal_id = Ceca.terminal_id unless @fields[mappings[:terminal_id]]
 
-          # Allow credentials to be overwritten if needed
-          def credentials
-            @credentials || self.class.credentials
-          end
-          def credentials=(creds)
-            @credentials = (self.class.credentials || {}).dup.merge(creds)
+            # Fields with defaults
+            self.currency = Ceca.default_currency unless @fields[mappings[:currency]]
+            self.language = Ceca.default_language unless @fields[mappings[:language]]
+            self.success_url = Ceca.default_success_url unless @fields[mappings[:success_url]]
+            self.failure_url = Ceca.default_failure_url unless @fields[mappings[:failure_url]]
+
+            # Fixed fields
+            self.exponent = Ceca::EXPONENT_FIELD
+            self.encryption = Ceca::ENCRYPTION_FIELD
+            self.supported_payment = Ceca::SUPPORTED_PAYMENT_FIELD
           end
 
           def amount=(money)
@@ -93,13 +111,11 @@ module ActiveMerchant #:nodoc:
             add_field mappings[:amount], cents.to_i
           end
 
-          def order=(order_id)
-            order_id = order_id.to_s
-            if order_id !~ /^[0-9]{4}/ && order_id.length <= 8
-              order_id = ('0' * 4) + order_id
-            end
-            regexp = /^[0-9]{4}[0-9a-zA-Z]{0,8}$/
+          def order=(order_num)
+            order_num = order_id.to_s
+            regexp = /^[A-Za-z0-9_\-]{1,50}$/
             raise "Invalid order number format! First 4 digits must be numbers" if order_id !~ regexp
+
             add_field mappings[:order], order_id
           end
 
@@ -111,21 +127,20 @@ module ActiveMerchant #:nodoc:
             add_field mappings[:language], Ceca.language_code(lang)
           end
 
-          def transaction_type=(type)
-            add_field mappings[:transaction_type], Ceca.transaction_code(type)
+
+          def form_fields 
+            @fields.merge(mappings[:signature] => sign_form)
           end
 
-          def form_fields
-            add_field mappings[:signature], sign_request
-            @fields
+          def request_fields 
+            @fields.merge(mappings[:signature] => sign_request)
           end
-
 
           # Send a manual request for the currently prepared transaction.
           # This is an alternative to the normal view helper and is useful
           # for special types of transaction.
           def send_transaction
-            body = build_xml_request
+            body = build_cgi_request
 
             headers = { }
             headers['Content-Length'] = body.size.to_s
@@ -133,51 +148,31 @@ module ActiveMerchant #:nodoc:
             headers['Content-Type'] = 'application/x-www-form-urlencoded'
   
             # Return the raw response data
-            ssl_post(Ceca.operations_url, "entrada="+CGI.escape(body), headers)
+            ssl_post(Ceca.operations_url, body, headers)
           end
 
           protected
 
-          def build_xml_request
-            xml = Builder::XmlMarkup.new :indent => 2
-            xml.DATOSENTRADA do
-              xml.DS_Version 0.1
-              xml.DS_MERCHANT_CURRENCY @fields['Ds_Merchant_Currency']
-              xml.DS_MERCHANT_AMOUNT @fields['Ds_Merchant_Amount']
-              xml.DS_MERCHANT_MERCHANTURL @fields['Ds_Merchant_MerchantURL']
-              xml.DS_MERCHANT_TRANSACTIONTYPE @fields['Ds_Merchant_TransactionType']
-              xml.DS_MERCHANT_MERCHANTDATA @fields['Ds_Merchant_Product_Description']
-              xml.DS_MERCHANT_TERMINAL credentials[:terminal_id]
-              xml.DS_MERCHANT_MERCHANTCODE credentials[:commercial_id]
-              xml.DS_MERCHANT_ORDER @fields['Ds_Merchant_Order']
-              xml.DS_MERCHANT_MERCHANTSIGNATURE sign_request
-            end
-            xml.target!
+          def build_cgi_request
+            ActiveMerchant::PostData[request_fields].to_post_data
           end
 
 
           # Generate a signature authenticating the current request.
           # Values included in the signature are determined by the the type of 
           # transaction.
+          def sign_form
+            sign_for FormSignatureFields
+          end
+
           def sign_request
-            str = @fields['Ds_Merchant_Amount'].to_s +
-                  @fields['Ds_Merchant_Order'].to_s +
-                  @fields['Ds_Merchant_MerchantCode'].to_s +
-                  @fields['Ds_Merchant_Currency'].to_s
+            sign_for ReqSignatureFields
+          end
 
-            case Ceca.transaction_from_code(@fields['Ds_Merchant_TransactionType'])
-            when :recurring_transaction
-              str += @fields['Ds_Merchant_SumTotal']
-            end
+          def sign_for sign_fields
+            sign_str = Ceca::Helper.encryption_key + sign_fields.map {|f| @fields[f].to_s }.sum
 
-            if credentials[:key_type].blank? || credentials[:key_type] == 'sha1_extended'
-              str += @fields['Ds_Merchant_TransactionType'].to_s +
-                     @fields['Ds_Merchant_MerchantURL'].to_s # may be blank!
-            end
-
-            str += credentials[:secret_key]
-
-            Digest::SHA1.hexdigest(str)
+            Digest::SHA1.hexdigest(sig_str)
           end
 
         end
