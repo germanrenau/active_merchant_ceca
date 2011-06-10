@@ -67,7 +67,8 @@ module ActiveMerchant #:nodoc:
         self.operations_production_url = "https://pgw.ceca.es/cgi-bin/tpv"
 
         
-        mattr_accessor :acquirer_bin, :terminal_id, :encryption_key, :merchant_id
+        mattr_accessor :production_encryption_key, :test_encryption_key 
+        mattr_accessor :acquirer_bin, :terminal_id, :merchant_id
         mattr_accessor :default_success_url, :default_failure_url, :default_currency, :default_language
 
 
@@ -93,7 +94,18 @@ module ActiveMerchant #:nodoc:
           else
             raise StandardError, "Integration mode set to an invalid value: #{mode}"
           end
+        end
 
+        def self.encryption_key
+          mode = ActiveMerchant::Billing::Base.integration_mode
+          case mode
+          when :production
+            self.production_encryption_key
+          when :test
+            self.test_encryption_key
+          else
+            raise StandardError, "Integration mode set to an invalid value: #{mode}"
+          end
         end
 
 
