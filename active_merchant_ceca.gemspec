@@ -1,5 +1,4 @@
 # -*- encoding: utf-8 -*-
-
 Gem::Specification.new do |s|
   s.name = %q{active_merchant_ceca}
   s.version = "0.0.1"
@@ -15,12 +14,14 @@ Gem::Specification.new do |s|
   s.rubygems_version = "1.3.7"
 
   s.files         = `git ls-files`.split("\n")
-  s.test_files    = `git ls-files -- {test}/*`.split("\n")
+  s.test_files    = `git ls-files -- {spec}/*`.split("\n")
   s.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
   s.require_paths = ["lib"]
 
   s.add_dependency("activemerchant", ">= 1.9.4")
-  s.add_development_dependency("rspec", ">= 2.6.0")
+  s.add_development_dependency("rspec", "~> 1.3.1")
+  s.add_development_dependency("rspec-rails", "~> 1.3.3")
   s.add_development_dependency("money", "~> 3.5.4")
+  s.add_development_dependency("actionpack", ">= 2.3.8")
 
 end
