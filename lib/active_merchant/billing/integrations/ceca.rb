@@ -5,6 +5,10 @@ module ActiveMerchant #:nodoc:
       # See the BbvaTpv::Helper class for more generic information on usage of
       # this integrated payment method.
       module Ceca
+        autoload :Helper, 'active_merchant/billing/integrations/ceca/helper.rb'
+        autoload :Return, 'active_merchant/billing/integrations/ceca/return.rb'
+        autoload :Notification, 'active_merchant/billing/integrations/ceca/notification.rb'
+
         EXPONENT_FIELD = "2"
         ENCRYPTION_FIELD = "SHA1"
         SUPPORTED_PAYMENT_FIELD = "SSL"
@@ -51,10 +55,7 @@ module ActiveMerchant #:nodoc:
           [900, "Devolución aceptada"]
         ]
 
-        autoload :Helper, 'active_merchant/billing/integrations/ceca/helper.rb'
-        autoload :Return, 'active_merchant/billing/integrations/ceca/return.rb'
-        autoload :Notification, 'active_merchant/billing/integrations/ceca/notification.rb'
-      
+
 
         mattr_accessor :service_test_url
         self.service_test_url = "http://tpv.ceca.es:8000/cgi-bin/tpv"
