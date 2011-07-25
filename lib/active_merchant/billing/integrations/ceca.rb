@@ -63,9 +63,9 @@ module ActiveMerchant #:nodoc:
         self.service_production_url = "https://pgw.ceca.es/cgi-bin/tpv"
 
         mattr_accessor :operations_test_url
-        self.operations_test_url = "http://tpv.ceca.es:8000/cgi-bin/tpv"
+        self.operations_test_url = "http://tpv.ceca.es:8000/cgi-bin/tpvanular"
         mattr_accessor :operations_production_url
-        self.operations_production_url = "https://pgw.ceca.es/cgi-bin/tpv"
+        self.operations_production_url = "https://pgw.ceca.es/cgi-bin/tpvanular"
 
         
         mattr_accessor :production_encryption_key, :test_encryption_key 
