@@ -1,0 +1,6 @@
+(in /home/pablo/Proyectos/ceca_active_merchant)
+rake build       # Build active_merchant_ceca-0.0.1.gem into the pkg directory
+rake default     # Run the unit test suite
+rake install     # Build and install active_merchant_ceca-0.0.1.gem into system gems
+rake release     # Create tag v0.0.1 and build and push active_merchant_ceca-0.0.1.gem to Rubygems
+rake test:units  # Run tests for units
