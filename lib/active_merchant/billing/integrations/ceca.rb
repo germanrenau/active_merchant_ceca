@@ -133,7 +133,7 @@ module ActiveMerchant #:nodoc:
 
         def self.response_message_from_code(code)
           row = RESPONSE_CODES.assoc(code.to_i)
-          row.nil? ? "ERROR" : row[1]
+          row && row[1]
         end
 
 
