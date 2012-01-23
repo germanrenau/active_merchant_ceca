@@ -13,16 +13,16 @@ module ActiveMerchant #:nodoc:
         ENCRYPTION_FIELD = "SHA1"
         SUPPORTED_PAYMENT_FIELD = "SSL"
 
-        SUPPORTED_LANGUAGES = [ 
-          [:es, "01"],
-          [:ca, "02"],
-          [:eu, "03"],
-          [:gl, "04"],
-          [:va, "05"],
-          [:en, "06"],
-          [:fr, "07"],
-          [:de, "08"],
-          [:pt, "09"], 
+        SUPPORTED_LANGUAGES = [
+          [:es, "1"],
+          [:ca, "2"],
+          [:eu, "3"],
+          [:gl, "4"],
+          [:va, "5"],
+          [:en, "6"],
+          [:fr, "7"],
+          [:de, "8"],
+          [:pt, "9"],
           [:it, "10"] ]
 
 #        SUPPORTED_TRANSACTIONS = [
@@ -42,7 +42,10 @@ module ActiveMerchant #:nodoc:
 #          [:inicial_recurring_authorization,    'R'],
 #          [:successive_recurring_authorization, 'S'] ]
         
-        SUPPORTED_CURRENCIES = [ ['EUR', '978'] ]
+        SUPPORTED_CURRENCIES = [
+          ['EUR', '978'],
+          ['USD', '840'],
+          ['GBP', '826'] ]
 
 
         RESPONSE_CODES = [
@@ -52,8 +55,7 @@ module ActiveMerchant #:nodoc:
           [13,  "OPERACION INCORRECTA"],
           [190, "Operación no realizable"],
           [400, "Anulación aceptada"],
-          [900, "Devolución aceptada"]
-        ]
+          [900, "Devolución aceptada"] ]
 
 
 
@@ -68,7 +70,7 @@ module ActiveMerchant #:nodoc:
         self.operations_production_url = "https://pgw.ceca.es/cgi-bin/tpvanular"
 
         
-        mattr_accessor :production_encryption_key, :test_encryption_key 
+        mattr_accessor :production_encryption_key, :test_encryption_key
         mattr_accessor :acquirer_bin, :terminal_id, :merchant_id
         mattr_accessor :default_success_url, :default_failure_url, :default_currency, :default_language
 
@@ -134,6 +136,16 @@ module ActiveMerchant #:nodoc:
         def self.response_message_from_code(code)
           row = RESPONSE_CODES.assoc(code.to_i)
           row && row[1]
+        end
+
+        def self.sing_values values
+          sing_values_using_key values, self.encryption_key
+        end
+
+        def self.sing_values_using_key values, key
+          sign_str = key + values.map(&:to_s).sum
+
+          Digest::SHA1.hexdigest(sign_str)
         end
 
 

@@ -58,15 +58,15 @@ describe ActiveMerchant::Billing::Integrations::Ceca do
 
   describe ".language_code" do
     it "should return the correct language code" do
-      Ceca.language_code('es').should == '01'
-      Ceca.language_code('CA').should == '02'
-      Ceca.language_code(:pt).should == '09'
+      Ceca.language_code('es').should == '1'
+      Ceca.language_code('CA').should == '2'
+      Ceca.language_code(:pt).should == '9'
     end
   end
 
   describe ".language_from_code" do
     it "should return the correct language name" do
-      Ceca.language_from_code('02').should == :ca
+      Ceca.language_from_code('2').should == :ca
     end 
   end
 
@@ -75,5 +75,28 @@ describe ActiveMerchant::Billing::Integrations::Ceca do
       Ceca.response_message_from_code(0).should == "OPERACIÓN AUTORIZADA"
       Ceca.response_message_from_code("01").should == "COMUNICACION ON-LINE INCORRECTA"
     end 
+  end
+
+  describe ".sing_values_using_key" do
+    before do
+      ActiveMerchant::Billing::Base.integration_mode = :test
+      @values = ["Almacen Don Manolo", "000000152", "EUR", "5500"]
+      @key = "13581321"
+      @signed_values = Digest::SHA1.hexdigest("#{@key}Almacen Don Manolo000000152EUR5500")
+    end
+    it "should sing passed values with current encription key" do
+      Ceca.sing_values_using_key(@values, @key).should == @signed_values
+    end
+  end
+
+  describe ".sing_values" do
+    before do
+      ActiveMerchant::Billing::Base.integration_mode = :test
+      @values = ["Almacen Don Manolo", "000000152", "EUR", "5500"]
+      @signed_values = Digest::SHA1.hexdigest("12345678Almacen Don Manolo000000152EUR5500")
+    end
+    it "should sing passed values with current encription key" do
+      Ceca.sing_values(@values).should == @signed_values
+    end
   end
 end 

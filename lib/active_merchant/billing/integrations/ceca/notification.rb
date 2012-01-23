@@ -6,21 +6,22 @@ module ActiveMerchant #:nodoc:
         class Notification < ActiveMerchant::Billing::Integrations::Notification
           include PostsData
 
-          NotifySignatureFields = ["MerchantID", "AcquiererBIN", "TerminalID", "Num_operacion", 
+          NotifySignatureFields = ["MerchantID", "AcquirerBIN", "TerminalID", "Num_operacion",
             "Importe", "TipoMoneda", "Exponente", "Referencia"]
 
+
+          # Notifications are only send for successful payments
+          def status
+            'Completed'
+          end
 
           def complete?
             status == 'Completed'
           end 
 
-          def order
-            params['Num_operacion']
-          end
-
           # When was this payment received by the client. 
           def received_at
-            Time.now
+            @received_at ||= Time.zone.now
           end
 
           # the money amount we received in cents in X.2 format
@@ -32,34 +33,22 @@ module ActiveMerchant #:nodoc:
             params['Importe'].to_i
           end
 
-          # Was this a test transaction?
-          def test?
-            false
-          end
 
           def currency
-            Ceca.currency_from_code( params['TipoMoneda'] ) 
+            Ceca.currency_from_code(currency_code)
           end
 
-          # Status of transaction. List of possible values:
-          # <tt>Completed</tt>
-          # <tt>Failed</tt>
-          def status
-            case error_code.to_i
-            when 0, 400, 900
-              'Completed'
-            else
-              'Failed'
-            end
+          def language
+            Ceca.language_from_code(language_code)
           end
 
-          def error_code
-            params['Num_aut']
-          end
 
-          def error_message
-            msg = Ceca.response_message_from_code(error_code)
-            error_code.to_s + ' - ' + (msg.nil? ? 'Operación Aceptada' : msg)
+          { :order => 'Num_operacion', :description => 'Descripcion', :currency_code => 'TipoMoneda',
+            :language_code => 'Idioma', :country_code => 'Pais', :reference => 'Referencia',
+            :authorization_number => 'Num_aut', :signature => "Firma" }.each do |method, field|
+
+            
+            class_eval "def #{method}; params['#{field}']; end"
           end
 
 
@@ -84,15 +73,14 @@ module ActiveMerchant #:nodoc:
           #
           #
           def acknowledge
-            sign = params["Firma"]
+            sign = signature
             sign.present? && sign == calculated_sign
           end
 
           private
 
           def calculated_sign
-            sign_str = Ceca.encryption_key + NotifySignatureFields.map {|f| params[f].to_s }.sum
-            Digest::SHA1.hexdigest(sign_str)
+            Ceca.sing_values params.values_at(*NotifySignatureFields)
           end
 
           # Take the posted data and try to extract the parameters.
@@ -102,7 +90,7 @@ module ActiveMerchant #:nodoc:
           #
           def parse(post)
             if post.is_a?(Hash)
-              post.each {|key, value|  params[key.downcase] = value }
+              post.each {|key, value| params[key] = value }
             else
               super
             end

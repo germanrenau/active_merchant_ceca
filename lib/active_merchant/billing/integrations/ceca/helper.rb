@@ -37,17 +37,18 @@ module ActiveMerchant #:nodoc:
         class Helper < ActiveMerchant::Billing::Integrations::Helper
           include PostsData
 
-          FormSignatureFields = ["MerchantID", "AcquiererBIN", "TerminalID", "Num_operacion", 
+          FormSignatureFields = ["MerchantID", "AcquirerBIN", "TerminalID", "Num_operacion",
             "Importe", "TipoMoneda", "Exponente", "Cifrado", "URL_OK", "URL_NOK"]
 
-          ReqSignatureFields = ["MerchantID", "AcquiererBIN", "TerminalID", "Num_operacion", 
+          ReqSignatureFields = ["MerchantID", "AcquirerBIN", "TerminalID", "Num_operacion",
             "Importe", "TipoMoneda", "Exponente", "Referencia", "Cifrado"]
 
 
-          mapping :acquirer_id,    'AcquirerBIN'
+          mapping :acquirer_bin,   'AcquirerBIN'
           mapping :terminal_id,    'TerminalID'
 
           mapping :account,     'MerchantID'
+          mapping :merchant_id, 'MerchantID'
 
           mapping :order,       'Num_operacion'
           mapping :description, 'Descripcion'
@@ -84,11 +85,12 @@ module ActiveMerchant #:nodoc:
 
           # ammount should always be provided in cents!
           def initialize(order, account, options = {})
-            super(order, account, options)
+            @encryption_key = options.delete(:encryption_key) || Ceca.encryption_key
+            super
 
             # Merchant Account specific fields
             self.account = Ceca.merchant_id unless @fields[mappings[:account]]
-            self.acquirer_id = Ceca.acquirer_id unless @fields[mappings[:acquirer_bin]]
+            self.acquirer_bin = Ceca.acquirer_bin unless @fields[mappings[:acquirer_bin]]
             self.terminal_id = Ceca.terminal_id unless @fields[mappings[:terminal_id]]
 
             # Fields with defaults
@@ -104,35 +106,33 @@ module ActiveMerchant #:nodoc:
           end
 
           def amount=(money)
-            cents = money.respond_to?(:cents) ? money.cents : money
+            money = money.to_money if money.respond_to?(:to_money)
+            cents = money.respond_to?(:cents) ? money.cents : money.to_money
+
             if money.is_a?(String) || cents.to_i <= 0
-              raise ArgumentError, 'money amount must be either a Money object or a positive integer in cents.'
+              raise ArgumentError, 'money amount must be either a Money object or a positive number.'
             end
             add_field mappings[:amount], cents.to_i
           end
 
           def order=(order_num)
-            order_num = order_id.to_s
-            regexp = /^[A-Za-z0-9_\-]{1,50}$/
-            raise "Invalid order number format! First 4 digits must be numbers" if order_id !~ regexp
-
-            add_field mappings[:order], order_id
+            add_field mappings[:order], order_num.to_s
           end
 
-          def currency=( value )
-            add_field mappings[:currency], Ceca.currency_code(value) 
+          def currency=(curr)
+            add_field mappings[:currency], Ceca.currency_code(curr.to_s)
           end
 
           def language=(lang)
-            add_field mappings[:language], Ceca.language_code(lang)
+            add_field mappings[:language], lang.blank? ? nil : Ceca.language_code(lang.to_sym)
           end
 
 
-          def form_fields 
+          def form_fields
             @fields.merge(mappings[:signature] => sign_form)
           end
 
-          def request_fields 
+          def request_fields
             @fields.merge(mappings[:signature] => sign_request)
           end
 
@@ -162,17 +162,19 @@ module ActiveMerchant #:nodoc:
           # Values included in the signature are determined by the the type of 
           # transaction.
           def sign_form
-            sign_for FormSignatureFields
+            get_sign_for(FormSignatureFields)
           end
 
           def sign_request
-            sign_for ReqSignatureFields
+            get_sign_for(ReqSignatureFields)
           end
 
-          def sign_for sign_fields
-            sign_str = Ceca::Helper.encryption_key + sign_fields.map {|f| @fields[f].to_s }.sum
-
-            Digest::SHA1.hexdigest(sig_str)
+          def get_sign_for signed_fields
+            if @encryption_key
+              Ceca.sing_values_using_key @fields.values_at(*signed_fields), @encryption_key
+            else
+              Ceca.sing_values @fields.values_at(*signed_fields)
+            end
           end
 
         end
